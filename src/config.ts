@@ -7,8 +7,6 @@ export interface Settings {
   readonly webhookSecret: string;
   readonly downloadDir: string;
   readonly maxUploadBytes: number;
-  readonly instagramCookiesFile: string | null;
-  readonly instagramCookiesB64: string | null;
 }
 
 export function loadSettings(environment: NodeJS.ProcessEnv = process.env): Settings {
@@ -46,19 +44,11 @@ export function loadSettings(environment: NodeJS.ProcessEnv = process.env): Sett
     );
   }
 
-  const instagramCookiesFile = environment.INSTAGRAM_COOKIES_FILE?.trim() || null;
-  const instagramCookiesB64 = environment.INSTAGRAM_COOKIES_B64?.trim() || null;
-  if (instagramCookiesFile && instagramCookiesB64) {
-    throw new Error("Set only one of INSTAGRAM_COOKIES_FILE or INSTAGRAM_COOKIES_B64");
-  }
-
   return Object.freeze({
     mainBotToken,
     webhookBaseUrl,
     webhookSecret,
     downloadDir: path.normalize(environment.DOWNLOAD_DIR?.trim() || "data/downloads"),
     maxUploadBytes: maxUploadMb * 1024 * 1024,
-    instagramCookiesFile: instagramCookiesFile ? path.normalize(instagramCookiesFile) : null,
-    instagramCookiesB64,
   });
 }

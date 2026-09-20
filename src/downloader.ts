@@ -3,7 +3,6 @@ import { mkdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { readInstagramCookieHeader } from "./instagram-auth.js";
 
 export class InvalidInstagramUrl extends Error {
   override name = "InvalidInstagramUrl";
@@ -234,29 +233,20 @@ function collectApiMedia(node: JsonRecord, fallbackId: string): RemoteMedia[] {
   return imageUrl ? [{ url: imageUrl, mimeType: mimeFromUrl(imageUrl, "image/jpeg"), id }] : [];
 }
 
-class InstagramRequestError extends Error {
-  constructor(message: string, readonly authenticationRelated: boolean) {
-    super(message);
-  }
-}
+class InstagramRequestError extends Error {}
 
 export interface InstagramDownloaderOptions {
   readonly maxBytes: number;
-  readonly cookiesFile?: string | null;
   readonly fetchImpl?: typeof fetch;
 }
 
 export class InstagramDownloader {
   readonly maxBytes: number;
-  readonly cookiesFile: string | null;
   private readonly fetchImpl: typeof fetch;
-  private readonly cookieHeader: string | null;
 
   constructor(options: InstagramDownloaderOptions) {
     this.maxBytes = options.maxBytes;
-    this.cookiesFile = options.cookiesFile ?? null;
     this.fetchImpl = options.fetchImpl ?? fetch;
-    this.cookieHeader = readInstagramCookieHeader(this.cookiesFile);
   }
 
   async download(url: string, destination: string): Promise<DownloadedMedia[]> {
@@ -267,7 +257,7 @@ export class InstagramDownloader {
     const remoteMedia = await this.resolveMedia(url.trim());
     if (remoteMedia.length === 0) {
       throw new MediaDownloadError(
-        "Instagram did not return downloadable media. The post may be private or unavailable.",
+        "This Instagram Reel or Story is not publicly available or is unavailable.",
       );
     }
 
@@ -279,19 +269,13 @@ export class InstagramDownloader {
   }
 
   private instagramHeaders(): HeadersInit {
-    const headers: Record<string, string> = {
+    return {
       Accept: "application/json,text/html;q=0.9,*/*;q=0.8",
       "User-Agent": USER_AGENT,
       "X-IG-App-ID": INSTAGRAM_APP_ID,
       "X-Requested-With": "XMLHttpRequest",
       Referer: "https://www.instagram.com/",
     };
-    if (this.cookieHeader) {
-      headers.Cookie = this.cookieHeader;
-      const csrf = /(?:^|;\s*)csrftoken=([^;]+)/.exec(this.cookieHeader)?.[1];
-      if (csrf) headers["X-CSRFToken"] = csrf;
-    }
-    return headers;
   }
 
   private async instagramFetch(url: string): Promise<Response> {
@@ -304,7 +288,6 @@ export class InstagramDownloader {
     } catch (error) {
       throw new InstagramRequestError(
         `Instagram request failed: ${error instanceof Error ? error.message : "network error"}`,
-        false,
       );
     }
   }
@@ -314,7 +297,6 @@ export class InstagramDownloader {
     if (!response.ok) {
       throw new InstagramRequestError(
         `Instagram returned HTTP ${response.status}`,
-        [401, 403, 429].includes(response.status),
       );
     }
     try {
@@ -322,37 +304,28 @@ export class InstagramDownloader {
       if (!result) throw new Error("not an object");
       return result;
     } catch {
-      throw new InstagramRequestError("Instagram returned an invalid response", true);
+      throw new InstagramRequestError("Instagram returned an invalid response");
     }
   }
 
   private async resolveMedia(url: string): Promise<RemoteMedia[]> {
     try {
-      return isInstagramStoryUrl(url)
+      const directMedia = isInstagramStoryUrl(url)
         ? await this.resolveStory(url)
         : await this.resolveReel(url);
+      if (directMedia.length > 0) return directMedia;
     } catch (error) {
       if (error instanceof InvalidInstagramUrl || error instanceof MediaDownloadError) throw error;
-      if (!this.cookiesFile && error instanceof InstagramRequestError) {
-        try {
-          const publicMedia = await this.resolvePublicMedia(url);
-          if (publicMedia.length > 0) return publicMedia;
-        } catch {
-          // Preserve the clean Instagram authentication/unavailable error below.
-        }
-      }
-      if (error instanceof InstagramRequestError) {
-        if (error.authenticationRelated) {
-          throw new MediaDownloadError(
-            this.cookiesFile
-              ? "Instagram authentication failed. The bot's session may have expired, or its Instagram account is not allowed to view this media."
-              : "Instagram requires a logged-in session for this Reel or Story. The bot owner must configure Instagram cookies.",
-          );
-        }
-        throw new MediaDownloadError("Instagram could not provide downloadable media for this link.");
-      }
-      throw new MediaDownloadError("Instagram could not provide downloadable media for this link.");
     }
+    try {
+      const publicMedia = await this.resolvePublicMedia(url);
+      if (publicMedia.length > 0) return publicMedia;
+    } catch {
+      // Public providers may reject unavailable, private, or expired media.
+    }
+    throw new MediaDownloadError(
+      "This Instagram Reel or Story is not publicly available or is unavailable.",
+    );
   }
 
   private async resolveReel(url: string): Promise<RemoteMedia[]> {
@@ -379,7 +352,7 @@ export class InstagramDownloader {
       const media = this.extractOpenGraphMedia(html, shortcode);
       if (media.length > 0) return media;
     }
-    throw apiError ?? new InstagramRequestError("No Reel media was returned", response.status >= 400);
+    throw apiError ?? new InstagramRequestError("No Reel media was returned");
   }
 
   private extractOpenGraphMedia(html: string, id: string): RemoteMedia[] {
@@ -410,7 +383,7 @@ export class InstagramDownloader {
     );
     const user = asRecord(asRecord(profile.data)?.user);
     const userId = firstString(user?.id);
-    if (!userId) throw new InstagramRequestError("Instagram profile was not found", false);
+    if (!userId) throw new InstagramRequestError("Instagram profile was not found");
 
     const feed = await this.instagramJson(
       `https://www.instagram.com/api/v1/feed/reels_media/?reel_ids=${encodeURIComponent(userId)}`,
@@ -436,7 +409,7 @@ export class InstagramDownloader {
       redirect: "follow",
       signal: AbortSignal.timeout(30_000),
     });
-    if (!page.ok) throw new Error("Public Story provider is unavailable");
+    if (!page.ok) throw new Error("Public media provider is unavailable");
     const pageHtml = await page.text();
     if (pageHtml.length > MAX_PROVIDER_RESPONSE_BYTES) throw new Error("Provider response is too large");
     const expiration = /k_exp=["']([^"']+)["']/.exec(pageHtml)?.[1];
@@ -465,13 +438,13 @@ export class InstagramDownloader {
       redirect: "follow",
       signal: AbortSignal.timeout(60_000),
     });
-    if (!response.ok) throw new Error("Public Story provider rejected the request");
+    if (!response.ok) throw new Error("Public media provider rejected the request");
     const declaredLength = Number(response.headers.get("content-length") ?? "0");
     if (declaredLength > MAX_PROVIDER_RESPONSE_BYTES) throw new Error("Provider response is too large");
     const result = asRecord(await response.json());
     const responseHtml = typeof result?.data === "string" ? result.data : "";
     if (result?.status !== "ok" || responseHtml.length > MAX_PROVIDER_RESPONSE_BYTES) {
-      throw new Error("Public Story provider returned no media");
+      throw new Error("Public media provider returned no media");
     }
     return parsePublicInstagramMedia(responseHtml);
   }
@@ -494,8 +467,7 @@ export class InstagramDownloader {
     let response: Response;
     try {
       response = await this.fetchImpl(parsed, {
-        // Media URLs are signed. Never forward Instagram session cookies to
-        // CDN or fallback-provider hosts.
+        // Media URLs are signed and requests never include Instagram credentials.
         headers: {
           "User-Agent": USER_AGENT,
           Referer: media.publicProvider
@@ -522,7 +494,7 @@ export class InstagramDownloader {
         finalHost.endsWith(".fbcdn.net");
       if (!allowedFinalHost) {
         await response.body.cancel();
-        throw new MediaDownloadError("The public Story provider returned an unsafe media URL.");
+        throw new MediaDownloadError("The public media provider returned an unsafe media URL.");
       }
     }
     const declaredLength = Number(response.headers.get("content-length") ?? "0");

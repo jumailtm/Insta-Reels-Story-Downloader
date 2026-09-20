@@ -6,7 +6,6 @@ import express, { type Express, type NextFunction, type Request, type Response }
 import { BOT_DESCRIPTION, BOT_SHORT_DESCRIPTION, MAIN_BOT_COMMANDS } from "./commands.js";
 import { loadSettings, type Settings } from "./config.js";
 import { InstagramDownloader } from "./downloader.js";
-import { materializeInstagramCookies } from "./instagram-auth.js";
 import { TelegramClient, type TelegramUpdate } from "./telegram.js";
 import { processUpdate } from "./user-bot.js";
 
@@ -37,10 +36,6 @@ function createRuntime(): { runtime: Runtime | null; configurationError: string 
     if (process.env.VERCEL) {
       settings = Object.freeze({ ...settings, downloadDir: path.join(tmpdir(), "downloads") });
     }
-    settings = materializeInstagramCookies(
-      settings,
-      process.env.VERCEL ? tmpdir() : path.dirname(settings.downloadDir),
-    );
     mkdirSync(settings.downloadDir, { recursive: true });
     const telegram = new TelegramClient(settings.mainBotToken);
     return {
@@ -49,7 +44,6 @@ function createRuntime(): { runtime: Runtime | null; configurationError: string 
         telegram,
         downloader: new InstagramDownloader({
           maxBytes: settings.maxUploadBytes,
-          cookiesFile: settings.instagramCookiesFile,
         }),
       },
       configurationError: null,
@@ -120,7 +114,6 @@ export function createApp(): Express {
       update_mode: "webhook",
       webhook_path: "/api",
       telegram_webhook: webhook,
-      instagram_auth_configured: Boolean(runtime?.settings.instagramCookiesFile),
     });
   };
   app.get("/", health);

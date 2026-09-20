@@ -1,3 +1,4 @@
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadSettings } from "../src/config.js";
 
@@ -20,7 +21,7 @@ describe("loadSettings", () => {
     );
   });
 
-  it("rejects conflicting cookie sources", () => {
-    expect(() => loadSettings({ ...required, INSTAGRAM_COOKIES_FILE: "cookies.txt", INSTAGRAM_COOKIES_B64: "dGVzdA==" })).toThrow(/only one/);
+  it("uses the default download directory", () => {
+    expect(loadSettings(required).downloadDir).toBe(path.normalize("data/downloads"));
   });
 });

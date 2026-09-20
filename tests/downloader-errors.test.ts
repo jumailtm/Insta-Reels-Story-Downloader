@@ -10,8 +10,12 @@ afterEach(async () => {
 });
 
 describe("Instagram download errors", () => {
-  it("returns a clean authentication error after a rate limit", async () => {
-    const fetchImpl = vi.fn(async () => new Response("login", { status: 429 })) as unknown as typeof fetch;
+  it("returns a public-only error when anonymous sources have no media", async () => {
+    const fetchImpl = vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
+      expect(new Headers(init?.headers).has("Cookie")).toBe(false);
+      expect(new Headers(init?.headers).has("X-CSRFToken")).toBe(false);
+      return new Response("unavailable", { status: 429 });
+    }) as unknown as typeof fetch;
     const downloader = new InstagramDownloader({ maxBytes: 1024, fetchImpl });
     const temporary = await mkdtemp(path.join(tmpdir(), "instagram-test-"));
     temporaryDirectories.push(temporary);
@@ -21,7 +25,7 @@ describe("Instagram download errors", () => {
     } catch (error) {
       message = error instanceof Error ? error.message : String(error);
     }
-    expect(message).toMatch(/requires a logged-in session/);
+    expect(message).toMatch(/not publicly available/);
     expect(message).not.toMatch(/rate-limit|https:\/\//);
   });
 });
