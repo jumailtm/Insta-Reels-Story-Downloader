@@ -7,5 +7,3 @@ services:
       - "8000:8000"
     volumes:
       - ./data:/app/data
-      # Uncomment when INSTAGRAM_COOKIES_FILE points to this path.
-      # - ./instagram-cookies.txt:/app/instagram-cookies.txt:ro

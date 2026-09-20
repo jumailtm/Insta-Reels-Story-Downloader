@@ -13,8 +13,7 @@
     "start": "node dist/src/main.js",
     "test": "npm run check:secrets && vitest run",
     "check:secrets": "tsx scripts/check-secrets.ts",
-    "configure:webhook": "tsx scripts/configure-webhook.ts",
-    "configure:auth": "tsx scripts/configure-instagram-auth.ts"
+    "configure:webhook": "tsx scripts/configure-webhook.ts"
   },
   "dependencies": {
     "dotenv": "^17.0.2",
