@@ -1,0 +1,42 @@
+# Local environment files. The example contains placeholders only.
+.env
+.env.*
+!.env.example
+.envrc
+*.local
+.npmrc
+.netrc
+
+# Authentication material and private keys.
+*credentials*.json
+*secrets*.json
+*service-account*.json
+*auth*.json
+*cookies*.txt
+*.session
+*.session-journal
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+*.kdbx
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+
+# Local databases can contain user or session data.
+*.db
+*.sqlite
+*.sqlite3
+
+# Dependencies, generated output, and local platform state.
+node_modules/
+dist/
+coverage/
+.vercel/
+data/
+*.log
+npm-debug.log*

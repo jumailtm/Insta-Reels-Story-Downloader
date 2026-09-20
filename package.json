@@ -1,0 +1,30 @@
+{
+  "name": "instagram-reel-story-telegram-bot",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "tsc --noEmit",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/src/main.js",
+    "test": "npm run check:secrets && vitest run",
+    "check:secrets": "tsx scripts/check-secrets.ts",
+    "configure:webhook": "tsx scripts/configure-webhook.ts",
+    "configure:auth": "tsx scripts/configure-instagram-auth.ts"
+  },
+  "dependencies": {
+    "dotenv": "^17.0.2",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.1"
+  }
+}
