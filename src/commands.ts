@@ -4,12 +4,12 @@ export interface BotCommand {
 }
 
 export const BOT_SHORT_DESCRIPTION =
-  "Download Instagram Reels and Stories quickly from a shared link.";
+  "Download public Instagram Reels and Stories from a shared link.";
 
 export const BOT_DESCRIPTION =
-  "Download Instagram Reels and Stories directly in Telegram. " +
-  "Send a Reel or Story link and the bot will return the available media. " +
-  "Private media works only when the bot has permission to view it.";
+  "Download publicly available Instagram Reels and Stories directly in Telegram. " +
+  "Send a public Reel or Story link and the bot will return the available media. " +
+  "Login-protected media is not supported.";
 
 export const MAIN_BOT_COMMANDS: readonly BotCommand[] = Object.freeze([
   { command: "start", description: "Start the bot" },

@@ -17,15 +17,14 @@ import {
 } from "./telegram.js";
 
 export const WELCOME_TEXT =
-  "👋 Welcome!\n\nSend me an Instagram Reel or Story link and I will download the media.";
+  "👋 Welcome!\n\nSend me a public Instagram Reel or Story link and I will download the media.";
 
 export const HELP_TEXT =
-  "Send one Instagram Reel or Story URL as text.\n\n" +
+  "Send one public Instagram Reel or Story URL as text.\n\n" +
   "Supported examples:\n" +
   "https://www.instagram.com/reel/ABC123/\n" +
   "https://www.instagram.com/stories/username/123456789/\n\n" +
-  "Private media works only when the bot's Instagram account is permitted to view it. " +
-  "Never send your Instagram password to this bot.";
+  "Only publicly available media is supported. Private accounts and login-protected media cannot be downloaded.";
 
 export interface UserBotDependencies {
   readonly settings: Settings;

@@ -33,15 +33,16 @@ describe("public Story fallback", () => {
 
     const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
+      const requestHeaders = new Headers(init?.headers);
+      expect(requestHeaders.has("Cookie")).toBe(false);
+      expect(requestHeaders.has("X-CSRFToken")).toBe(false);
       if (url.includes("/api/v1/users/web_profile_info/")) {
         return new Response("rate limited", { status: 429 });
       }
       if (url === "https://snapvideo.app/en") {
-        expect(new Headers(init?.headers).has("Cookie")).toBe(false);
         return new Response('k_exp="expiry"; k_token="provider-token";');
       }
       if (url === "https://snapvideo.app/api/ajaxSearch") {
-        expect(new Headers(init?.headers).has("Cookie")).toBe(false);
         providerBody = String(init?.body);
         return Response.json({
           status: "ok",

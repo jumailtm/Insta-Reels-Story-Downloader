@@ -26,6 +26,9 @@ describe("public Reel fallback", () => {
 
     const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
+      const requestHeaders = new Headers(init?.headers);
+      expect(requestHeaders.has("Cookie")).toBe(false);
+      expect(requestHeaders.has("X-CSRFToken")).toBe(false);
       if (url.includes("/api/v1/media/")) return new Response("rate limited", { status: 429 });
       if (url.startsWith("https://www.instagram.com/reel/")) {
         return new Response("login required");
@@ -41,7 +44,6 @@ describe("public Reel fallback", () => {
         });
       }
       if (url === videoUrl) {
-        expect(new Headers(init?.headers).has("Cookie")).toBe(false);
         const response = new Response(new Uint8Array([4, 5, 6]), {
           headers: { "content-type": "video/mp4" },
         });
