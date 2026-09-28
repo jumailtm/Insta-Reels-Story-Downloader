@@ -16,7 +16,7 @@ database, admin account, admin notification, admin approval, or admin webhook.
 ## Supported links
 
 ```text
-https://www.instagram.com/reel/ABC123/
+https://www.instagram.com/reel/ABC1234/
 https://www.instagram.com/stories/username/1234567890/
 ```
 
